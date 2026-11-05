@@ -163,8 +163,9 @@
 
   .toast{
     position:fixed;left:50%;bottom:34px;z-index:60;transform:translateX(-50%) translateY(10px);
-    background:rgba(22,32,44,.9);color:#fff;font-size:13px;padding:9px 16px;border-radius:999px;
-    opacity:0;pointer-events:none;transition:.25s ease;white-space:nowrap;
+    background:rgba(22,32,44,.9);color:#fff;font-size:13px;padding:9px 16px;border-radius:14px;
+    opacity:0;pointer-events:none;transition:.25s ease;
+    max-width:84vw;text-align:center;line-height:1.45;
   }
   .toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
 </style>
@@ -260,7 +261,7 @@
       <button class="btn" id="btnClose" type="button">关闭</button>
       <button class="btn primary" id="btnSave" type="button">保存图片</button>
     </div>
-    <div class="tipline">手机浏览器可长按图片保存到相册</div>
+    <div class="tipline">点保存后，在系统菜单里选「存储图像」（iPhone）或「保存到相册」（安卓），图片才会进相册。<br>菜单没弹出来？在图片上长按也能直接存。</div>
   </div>
 </div>
 
@@ -855,16 +856,52 @@
     $('#cardMask').classList.remove('on');
   });
 
-  $('#btnSave').addEventListener('click', function(){
-    if (!cardCanvas) cardCanvas = buildCard();
-    var url = cardCanvas.toDataURL('image/png');
+  // 手机浏览器允许的路径只有两条：①系统分享面板里选「存储图像/保存到相册」
+  // ②在图片上长按保存。a[download] 只会落到「文件/下载」目录，进不了相册。
+  var IS_MOBILE = /Android|iPhone|iPad|iPod|HarmonyOS|Mobile/i.test(navigator.userAgent);
+
+  function downloadPng(url, name){
     var a = document.createElement('a');
     a.href = url;
-    a.download = '健康记录卡_' + todayKey() + '.png';
+    a.download = name;
+    a.rel = 'noopener';
     document.body.appendChild(a);
     a.click();
     a.remove();
-    toast('已保存图片，也可长按图片保存');
+  }
+
+  // dataURL → File 同步完成：iOS Safari 要求 share() 必须落在点击的同一手势里，
+  // 用异步的 canvas.toBlob 会让手势失效，分享面板直接报 NotAllowedError。
+  function dataUrlToFile(dataUrl, name){
+    var bin = atob(dataUrl.split(',')[1]);
+    var len = bin.length;
+    var bytes = new Uint8Array(len);
+    for (var i = 0; i < len; i++) bytes[i] = bin.charCodeAt(i);
+    return new File([bytes], name, {type: 'image/png'});
+  }
+
+  $('#btnSave').addEventListener('click', function(){
+    if (!cardCanvas) cardCanvas = buildCard();
+    var name = '健康记录卡_' + todayKey() + '.png';
+    var png = cardCanvas.toDataURL('image/png');
+
+    if (IS_MOBILE && navigator.canShare && window.File) {
+      var file = null;
+      try { file = dataUrlToFile(png, name); } catch(e){ file = null; }
+      if (file && navigator.canShare({files: [file]})) {
+        navigator.share({files: [file], title: '今日记录卡'}).then(function(){
+          toast('在系统菜单里选「存储图像」就会进相册');
+        }).catch(function(err){
+          if (err && err.name === 'AbortError') return;   // 用户自己取消，不打扰
+          downloadPng(png, name);
+          toast('已下载到「文件/下载」；相册没显示就长按图片存');
+        });
+        return;
+      }
+    }
+
+    downloadPng(png, name);
+    toast(IS_MOBILE ? '已下载到「文件/下载」；相册没显示就长按图片存' : '已下载：' + name);
   });
 
   // 点遮罩关闭

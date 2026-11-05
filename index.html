@@ -1,0 +1,890 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#f2f5fa">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>昊哥的健康记录</title>
+<style>
+  :root{
+    --bg:#f2f5fa; --card:#fff; --ink:#16202c; --muted:#8b95a7;
+    --line:#eef1f6; --blue:#2f88ff; --blue-soft:#eaf3ff;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0}
+  body{
+    background:var(--bg); color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",system-ui,sans-serif;
+    font-size:15px; line-height:1.45; -webkit-font-smoothing:antialiased;
+  }
+  button{font-family:inherit;touch-action:manipulation}
+  .wrap{max-width:520px;margin:0 auto;padding:14px 14px calc(30px + env(safe-area-inset-bottom))}
+
+  /* ---------- 存储不可用提示 ---------- */
+  .notice{
+    display:flex;flex-direction:column;gap:10px;margin-bottom:14px;
+    background:#fff7e8;border:1px solid #ffe1b0;border-radius:14px;padding:13px 14px;
+  }
+  .notice[hidden]{display:none}
+  .notice-txt{font-size:12.5px;line-height:1.55;color:#7a5a20}
+  .notice-txt b{display:block;font-size:13px;color:#5e4413;margin-bottom:2px}
+  .notice-btn{
+    width:100%;border:0;border-radius:10px;padding:11px 12px;cursor:pointer;
+    background:#f0a92f;color:#fff;font-size:13px;font-weight:700;letter-spacing:.2px;
+  }
+  .notice-btn:active{opacity:.9}
+
+  /* ---------- 顶部 ---------- */
+  .topbar{display:flex;align-items:center;gap:12px;padding:8px 4px 16px}
+  .avatar{
+    width:52px;height:52px;border-radius:50%;background:#fff;display:grid;place-items:center;
+    font-size:26px;line-height:1;flex:0 0 auto;border:1px solid #e8eef8;
+    box-shadow:0 4px 14px rgba(47,136,255,.16);
+  }
+  .who{flex:1;min-width:0}
+  .nameRow{display:flex;align-items:center;gap:8px}
+  .nameRow h1{
+    margin:0;font-size:19px;font-weight:700;letter-spacing:.2px;
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  }
+  .edit{
+    flex:0 0 auto;border:1px solid #dbe6f6;background:#fff;color:var(--blue);
+    font-size:12px;font-weight:600;padding:5px 10px;border-radius:999px;cursor:pointer;
+    display:inline-flex;align-items:center;gap:4px;
+  }
+  .edit:active{background:var(--blue-soft)}
+  .sub{font-size:12.5px;color:var(--muted);margin-top:3px}
+
+  /* ---------- 卡片 ---------- */
+  .card{
+    background:var(--card);border-radius:18px;padding:16px;margin-bottom:14px;
+    border:1px solid rgba(230,236,246,.9);box-shadow:0 6px 22px rgba(23,52,92,.06);
+  }
+  .card-head{display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin-bottom:12px}
+  .card-head h2{margin:0;font-size:15px;font-weight:700}
+  .hint{font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
+
+  /* ---------- 饮水 ---------- */
+  .water-top{display:flex;align-items:center;gap:16px}
+  .ringwrap{position:relative;width:104px;height:104px;flex:0 0 auto}
+  .ring{width:104px;height:104px;transform:rotate(-90deg);display:block}
+  .ring circle{fill:none;stroke-width:9;stroke-linecap:round}
+  .ring .bg{stroke:#eaf1fc}
+  .ring .fg{stroke:var(--blue);transition:stroke-dashoffset .5s cubic-bezier(.22,.61,.36,1)}
+  .ring-label{position:absolute;inset:0;display:grid;place-items:center;font-size:19px;font-weight:800;color:var(--blue)}
+  .water-nums{flex:1;min-width:0}
+  .big{font-size:30px;font-weight:800;letter-spacing:-.5px;color:var(--blue);line-height:1.1;font-variant-numeric:tabular-nums}
+  .big small{font-size:12.5px;font-weight:600;color:var(--muted);margin-left:3px;letter-spacing:0}
+  .water-sub{font-size:12.5px;color:var(--muted);margin-top:7px}
+  .water-sub b{color:#46536a;font-weight:700}
+
+  .btn-add{
+    width:100%;margin-top:14px;height:52px;border:0;border-radius:14px;
+    background:linear-gradient(180deg,#3d91ff,#2f7ff5);color:#fff;
+    font-size:16px;font-weight:700;letter-spacing:.3px;cursor:pointer;
+    box-shadow:0 8px 18px rgba(47,136,255,.26);transition:transform .12s ease;
+  }
+  .btn-add:active{transform:scale(.985);box-shadow:0 4px 10px rgba(47,136,255,.22)}
+  .btn-add.ghost{
+    background:linear-gradient(180deg,#4aa1ff,#2f88ff);box-shadow:0 8px 18px rgba(47,136,255,.22);
+  }
+
+  /* ---------- 列表 ---------- */
+  .list{margin-top:12px;display:flex;flex-direction:column;gap:8px}
+  .row{display:flex;align-items:center;gap:10px;padding:9px 11px;border-radius:11px;background:#f7f9fd}
+  .row .txt{flex:1;min-width:0;font-size:13.5px;color:#2b3646}
+  .row .sub2{font-size:11.5px;color:var(--muted);margin-top:1px}
+  .row .t{font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
+  .row .x{
+    flex:0 0 auto;width:26px;height:26px;border:0;border-radius:8px;background:#eaeff7;
+    color:#8b95a7;font-size:15px;line-height:1;cursor:pointer;
+  }
+  .row .x:active{background:#dfe7f3;color:#5b6675}
+  .empty{font-size:13px;color:#b2bccb;text-align:center;padding:12px 0}
+
+  /* ---------- 运动 ---------- */
+  .summary{display:flex;flex-direction:column;gap:8px;margin-bottom:14px}
+  .srow{display:flex;align-items:center;gap:9px;padding:10px 12px;border-radius:12px;background:#f7f9fd}
+  .dot{width:9px;height:9px;border-radius:50%;flex:0 0 auto}
+  .sname{font-size:13.5px;font-weight:600}
+  .sdetail{font-size:11.5px;color:var(--muted);margin-top:1px}
+  .sval{margin-left:auto;font-size:13.5px;font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap}
+
+  .tabs{display:flex;gap:8px;overflow-x:auto;padding:2px 0 12px;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+  .tabs::-webkit-scrollbar{display:none}
+  .tab{
+    flex:0 0 auto;padding:8px 15px;border-radius:999px;border:1px solid #e6ecf6;background:#fff;
+    color:#5b6675;font-size:13.5px;font-weight:600;cursor:pointer;transition:.15s ease;
+  }
+  .tab.on{color:#fff;border-color:transparent}
+
+  .entry{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .field{position:relative;background:#f7f9fd;border:1px solid #e9eef7;border-radius:12px;padding:8px 12px}
+  .field label{display:block;font-size:11px;color:var(--muted);margin-bottom:2px}
+  .field input{
+    width:100%;border:0;background:transparent;padding:0;outline:none;
+    font-size:17px;font-weight:700;color:#1b2531;font-variant-numeric:tabular-nums;
+  }
+  .field .unit{position:absolute;right:12px;bottom:10px;font-size:11.5px;color:#a9b4c4;pointer-events:none}
+  .field.hide{display:none}
+  .entry .btn-add{grid-column:1/-1;margin-top:0;height:48px;font-size:15px}
+
+  .avg{margin-top:12px;font-size:12px;color:var(--muted);text-align:center;font-variant-numeric:tabular-nums}
+
+  /* ---------- 弹层 ---------- */
+  .mask{
+    position:fixed;inset:0;z-index:50;display:none;align-items:center;justify-content:center;
+    padding:18px;background:rgba(16,29,48,.45);-webkit-backdrop-filter:blur(2px);backdrop-filter:blur(2px);
+  }
+  .mask.on{display:flex}
+  .sheet{
+    width:100%;max-width:400px;max-height:92vh;overflow:auto;background:#fff;border-radius:18px;
+    padding:18px;box-shadow:0 20px 50px rgba(10,25,50,.25);
+  }
+  .sheet h3{margin:0 0 12px;font-size:16px}
+  .sheet input{
+    width:100%;height:46px;border-radius:12px;border:1px solid #e2e9f4;background:#f7f9fd;
+    padding:0 14px;font-size:16px;outline:none;color:var(--ink);
+  }
+  .sheet input:focus{border-color:var(--blue);background:#fff;box-shadow:0 0 0 3px rgba(47,136,255,.12)}
+  .actions{display:flex;gap:10px;margin-top:14px}
+  .btn{
+    flex:1;height:46px;border-radius:12px;border:1px solid #e2e9f4;background:#fff;
+    font-size:15px;font-weight:600;color:#5b6675;cursor:pointer;
+  }
+  .btn.primary{
+    background:linear-gradient(180deg,#3d91ff,#2f7ff5);border-color:transparent;color:#fff;
+    box-shadow:0 6px 14px rgba(47,136,255,.24);
+  }
+  .btn:active{opacity:.9}
+  .cardimg{width:100%;display:block;border-radius:14px;-webkit-touch-callout:default;touch-action:manipulation}
+  .tipline{margin:10px 2px 0;font-size:11.5px;color:var(--muted);text-align:center;line-height:1.6}
+
+  .toast{
+    position:fixed;left:50%;bottom:34px;z-index:60;transform:translateX(-50%) translateY(10px);
+    background:rgba(22,32,44,.9);color:#fff;font-size:13px;padding:9px 16px;border-radius:999px;
+    opacity:0;pointer-events:none;transition:.25s ease;white-space:nowrap;
+  }
+  .toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="notice" id="notice" hidden>
+    <div class="notice-txt" id="noticeTxt"></div>
+    <button class="notice-btn" id="noticeBtn" type="button">新标签页打开 ↗</button>
+  </div>
+
+  <header class="topbar">
+    <div class="avatar" aria-hidden="true">🌱</div>
+    <div class="who">
+      <div class="nameRow">
+        <h1 id="nick">健康记录员</h1>
+        <button class="edit" id="editNick" type="button">✏️ 编辑昵称</button>
+      </div>
+      <div class="sub" id="dateLabel"></div>
+    </div>
+  </header>
+
+  <!-- 饮水 -->
+  <section class="card">
+    <div class="card-head">
+      <h2>饮水</h2>
+      <span class="hint">目标 2000 毫升</span>
+    </div>
+    <div class="water-top">
+      <div class="ringwrap">
+        <svg class="ring" viewBox="0 0 104 104" aria-hidden="true">
+          <circle class="bg" cx="52" cy="52" r="44"></circle>
+          <circle class="fg" id="ringFg" cx="52" cy="52" r="44"></circle>
+        </svg>
+        <div class="ring-label" id="waterPct">0%</div>
+      </div>
+      <div class="water-nums">
+        <div class="big"><span id="waterTotal">0</span><small>/ 2000 毫升</small></div>
+        <div class="water-sub" id="waterSub">还差 <b>2000</b> 毫升 · 再喝 8 杯</div>
+      </div>
+    </div>
+    <button class="btn-add" id="addWater" type="button">💧 记一杯 250 毫升</button>
+    <div class="list" id="waterList"></div>
+  </section>
+
+  <!-- 运动 -->
+  <section class="card">
+    <div class="card-head">
+      <h2>运动</h2>
+      <span class="hint" id="exHint"></span>
+    </div>
+    <div class="summary" id="exSummary"></div>
+    <div class="tabs" id="tabs"></div>
+    <div class="entry">
+      <div class="field" id="fieldKm">
+        <label>公里</label>
+        <input id="inKm" type="number" inputmode="decimal" step="0.01" min="0" placeholder="0.00">
+        <span class="unit">km</span>
+      </div>
+      <div class="field" id="fieldMin">
+        <label>分钟</label>
+        <input id="inMin" type="number" inputmode="decimal" step="1" min="0" placeholder="0">
+        <span class="unit">min</span>
+      </div>
+      <button class="btn-add ghost" id="addEx" type="button">记录</button>
+    </div>
+    <div class="avg" id="exAvg" style="display:none"></div>
+    <div class="list" id="exList"></div>
+  </section>
+
+  <button class="btn-add" id="openCard" type="button" style="background:linear-gradient(180deg,#57a9ff,#2f88ff)">🖼 生成今日记录卡</button>
+</div>
+
+<!-- 昵称弹层 -->
+<div class="mask" id="nickMask">
+  <div class="sheet">
+    <h3>修改昵称</h3>
+    <input id="nickInput" type="text" maxlength="12" placeholder="输入昵称（最多 12 字）">
+    <div class="actions">
+      <button class="btn" id="nickCancel" type="button">取消</button>
+      <button class="btn primary" id="nickSave" type="button">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- 记录卡弹层 -->
+<div class="mask" id="cardMask">
+  <div class="sheet">
+    <h3>今日记录卡</h3>
+    <img class="cardimg" id="cardImg" alt="今日记录卡">
+    <div class="actions">
+      <button class="btn" id="btnClose" type="button">关闭</button>
+      <button class="btn primary" id="btnSave" type="button">保存图片</button>
+    </div>
+    <div class="tipline">手机浏览器可长按图片保存到相册</div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(function(){
+  'use strict';
+
+  /* ================= 常量 ================= */
+  var KEY = 'hg_health_v1';
+  var DEFAULT_NICK = '健康记录员';
+  var CUP = 250;          // 每次饮水毫升
+  var GOAL = 2000;        // 饮水目标
+  var PALETTE = ['#2f88ff','#ff7a45','#21b07d','#8b5cf6','#f0a92f','#ee5a8b'];
+  var FONT = '"PingFang SC","Hiragino Sans GB","Microsoft YaHei",system-ui,sans-serif';
+
+  var PROJECTS = [
+    {id:'run',     name:'跑步', mode:'dist'},
+    {id:'walk',    name:'散步', mode:'dist'},
+    {id:'bike',    name:'骑行', mode:'dist'},
+    {id:'stretch', name:'拉伸', mode:'time'},
+    {id:'yoga',    name:'瑜伽', mode:'time'}
+  ];
+  var PMAP = {};
+  PROJECTS.forEach(function(p){ PMAP[p.id] = p; });
+  var WEEK = ['周日','周一','周二','周三','周四','周五','周六'];
+
+  /* ================= 工具 ================= */
+  function $(s){ return document.querySelector(s); }
+  function pad2(n){ return n < 10 ? '0' + n : '' + n; }
+  function uid(){ return Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
+  function todayKey(){
+    var d = new Date();
+    return d.getFullYear() + '-' + pad2(d.getMonth()+1) + '-' + pad2(d.getDate());
+  }
+  function fmtDateLong(){
+    var d = new Date();
+    return d.getFullYear() + '年' + (d.getMonth()+1) + '月' + d.getDate() + '日 ' + WEEK[d.getDay()];
+  }
+  function fmtDateShort(){
+    var d = new Date();
+    return (d.getMonth()+1) + '月' + d.getDate() + '日 ' + WEEK[d.getDay()];
+  }
+  function fmtTime(ts){
+    var d = new Date(ts);
+    return pad2(d.getHours()) + ':' + pad2(d.getMinutes());
+  }
+  function fmtNum(n){ return String(Math.round(n * 100) / 100); }
+  function fmtPace(p){
+    if (!p || !isFinite(p) || p <= 0) return '--';
+    var m = Math.floor(p), s = Math.round((p - m) * 60);
+    if (s === 60) { m++; s = 0; }
+    return m + "'" + pad2(s) + '"';
+  }
+  function hexA(hex, a){
+    var h = hex.replace('#','');
+    if (h.length === 3) h = h[0]+h[0]+h[1]+h[1]+h[2]+h[2];
+    var r = parseInt(h.slice(0,2),16), g = parseInt(h.slice(2,4),16), b = parseInt(h.slice(4,6),16);
+    return 'rgba(' + r + ',' + g + ',' + b + ',' + a + ')';
+  }
+  var toastTimer = null;
+  function toast(msg){
+    var t = $('#toast');
+    t.textContent = msg;
+    t.classList.add('on');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function(){ t.classList.remove('on'); }, 1800);
+  }
+
+  var noticeShown = false;
+  function showNotice(){
+    if (noticeShown) return;
+    noticeShown = true;
+    var n = document.getElementById('notice');
+    var txt = document.getElementById('noticeTxt');
+    var btn = document.getElementById('noticeBtn');
+    if (!n) return;
+    n.hidden = false;
+    if (IN_FRAME) {
+      txt.innerHTML = '<b>记录存不住：页面在预览框里</b>预览框被浏览器限制，写不进本地存储，刷新后记录会清空。请在独立标签页打开。';
+    } else {
+      txt.innerHTML = '<b>记录存不住：浏览器禁用了本地存储</b>可能是无痕模式，换个普通窗口重新打开即可。';
+      btn.style.display = 'none';
+    }
+  }
+
+  /* ================= 数据 ================= */
+  // 有些环境（被 sandbox 的预览框、无痕模式、禁用了站点数据的浏览器）根本不允许写入本地存储，
+  // 这时记录会"记得住但存不下"，一刷新就归零。先探测，再决定要不要提示用户换环境。
+  var STORAGE_OK = (function(){
+    try {
+      var k = '__hg_probe__';
+      window.localStorage.setItem(k, '1');
+      window.localStorage.removeItem(k);
+      return true;
+    } catch(e){ return false; }
+  })();
+  var IN_FRAME = (function(){
+    try { return window.top !== window.self; } catch(e){ return true; }
+  })();
+
+  var state = load();
+  var current = PROJECTS[0].id;
+  var cardCanvas = null;
+
+  function load(){
+    var s = null;
+    if (STORAGE_OK) {
+      try { s = JSON.parse(window.localStorage.getItem(KEY) || 'null'); } catch(e){ s = null; }
+    }
+    if (!s || typeof s !== 'object') s = {};
+
+    s.nickname = (typeof s.nickname === 'string' && s.nickname.trim()) ? s.nickname.trim() : DEFAULT_NICK;
+    s.colors = (s.colors && typeof s.colors === 'object') ? s.colors : {};
+    s.days = (s.days && typeof s.days === 'object') ? s.days : {};
+
+    // 每个项目随机分一个颜色，并保持稳定
+    PROJECTS.forEach(function(p){
+      if (!s.colors[p.id] || typeof s.colors[p.id] !== 'string') {
+        var used = [];
+        PROJECTS.forEach(function(q){ if (s.colors[q.id]) used.push(s.colors[q.id]); });
+        var pool = PALETTE.filter(function(c){ return used.indexOf(c) < 0; });
+        if (!pool.length) pool = PALETTE.slice();
+        s.colors[p.id] = pool[Math.floor(Math.random() * pool.length)];
+      }
+    });
+
+    // 只保留今天
+    var tk = todayKey();
+    Object.keys(s.days).forEach(function(k){ if (k !== tk) delete s.days[k]; });
+    if (!s.days[tk]) s.days[tk] = {water:[], ex:{}};
+    var d = s.days[tk];
+    if (!Array.isArray(d.water)) d.water = [];
+    if (!d.ex || typeof d.ex !== 'object') d.ex = {};
+    PROJECTS.forEach(function(p){ if (!Array.isArray(d.ex[p.id])) d.ex[p.id] = []; });
+
+    return s;
+  }
+
+  function save(){
+    if (!STORAGE_OK) { showNotice(); return; }
+    try { window.localStorage.setItem(KEY, JSON.stringify(state)); }
+    catch(e){ toast('保存失败：浏览器拒绝写入本地存储'); }
+  }
+
+  function day(){
+    var tk = todayKey();
+    if (!state.days[tk]) {
+      state.days = {};
+      state.days[tk] = {water:[], ex:{}};
+      PROJECTS.forEach(function(p){ state.days[tk].ex[p.id] = []; });
+    }
+    var d = state.days[tk];
+    PROJECTS.forEach(function(p){ if (!Array.isArray(d.ex[p.id])) d.ex[p.id] = []; });
+    return d;
+  }
+
+  /* ================= 渲染 ================= */
+  function render(){
+    var d = day();
+    $('#nick').textContent = state.nickname;
+    $('#dateLabel').textContent = fmtDateLong();
+    renderWater(d);
+    renderSummary(d);
+    renderTabs();
+    renderForm();
+    renderExList(d);
+  }
+
+  function renderWater(d){
+    var total = d.water.length * CUP;
+    var pct = Math.min(1, total / GOAL);
+    var C = 2 * Math.PI * 44;
+    var ring = $('#ringFg');
+    ring.style.strokeDasharray = C.toFixed(2);
+    ring.style.strokeDashoffset = (C * (1 - pct)).toFixed(2);
+    $('#waterPct').textContent = Math.round(total / GOAL * 100) + '%';
+    $('#waterTotal').textContent = total;
+
+    var left = Math.max(0, GOAL - total);
+    var sub = $('#waterSub');
+    if (left === 0) {
+      sub.innerHTML = '今日目标已完成 🎉';
+    } else {
+      sub.innerHTML = '还差 <b>' + left + '</b> 毫升 · 再喝 ' + Math.ceil(left / CUP) + ' 杯';
+    }
+
+    var box = $('#waterList');
+    if (!d.water.length) {
+      box.innerHTML = '<div class="empty">今天还没有喝水记录，点上面的按钮记一杯</div>';
+      return;
+    }
+    box.innerHTML = d.water.slice().sort(function(a,b){ return b.t - a.t; }).map(function(r){
+      return '<div class="row">' +
+        '<span class="txt">喝水 <b>' + CUP + '</b> 毫升</span>' +
+        '<span class="t">' + fmtTime(r.t) + '</span>' +
+        '<button class="x" type="button" data-kind="water" data-id="' + r.id + '">×</button>' +
+      '</div>';
+    }).join('');
+  }
+
+  function renderSummary(d){
+    var html = [];
+    var totalMin = 0, totalKm = 0;
+    PROJECTS.forEach(function(p){
+      var arr = d.ex[p.id] || [];
+      if (!arr.length) return;
+      var km = 0, min = 0;
+      arr.forEach(function(r){ km += (r.km || 0); min += (r.min || 0); });
+      totalMin += min;
+      if (p.mode === 'dist') totalKm += km;
+
+      var detail = arr.length + ' 次';
+      if (p.mode === 'dist') {
+        detail += ' · ' + Math.round(min) + ' 分钟';
+        if (p.id === 'run' && km > 0) detail += ' · 平均配速 ' + fmtPace(min / km);
+      }
+      var val = p.mode === 'dist' ? fmtNum(km) + ' 公里' : Math.round(min) + ' 分钟';
+
+      html.push('<div class="srow">' +
+        '<span class="dot" style="background:' + state.colors[p.id] + '"></span>' +
+        '<div><div class="sname">' + p.name + '</div><div class="sdetail">' + detail + '</div></div>' +
+        '<span class="sval" style="color:' + state.colors[p.id] + '">' + val + '</span>' +
+      '</div>');
+    });
+    $('#exSummary').innerHTML = html.length ? html.join('') : '<div class="empty">今日暂无运动记录</div>';
+    $('#exHint').textContent = html.length
+      ? ('共 ' + Math.round(totalMin) + ' 分钟' + (totalKm > 0 ? ' · ' + fmtNum(totalKm) + ' 公里' : ''))
+      : '';
+  }
+
+  function renderTabs(){
+    $('#tabs').innerHTML = PROJECTS.map(function(p){
+      var c = state.colors[p.id];
+      var on = p.id === current;
+      var style = on
+        ? 'background:' + c + ';box-shadow:0 6px 14px ' + hexA(c, .3)
+        : 'color:' + c + ';border-color:' + hexA(c, .28);
+      return '<button class="tab' + (on ? ' on' : '') + '" type="button" style="' + style + '" data-tab="' + p.id + '">' + p.name + '</button>';
+    }).join('');
+  }
+
+  function renderForm(){
+    var p = PMAP[current];
+    $('#fieldKm').classList.toggle('hide', p.mode !== 'dist');
+    $('#addEx').textContent = '记录' + p.name;
+  }
+
+  function renderExList(d){
+    var p = PMAP[current];
+    var arr = (d.ex[p.id] || []).slice().sort(function(a,b){ return b.t - a.t; });
+    var avg = $('#exAvg');
+
+    if (p.id === 'run' && arr.length) {
+      var km = 0, min = 0;
+      arr.forEach(function(r){ km += (r.km || 0); min += (r.min || 0); });
+      avg.textContent = km > 0 ? ('今日平均配速 ' + fmtPace(min / km) + ' /公里') : '';
+      avg.style.display = avg.textContent ? '' : 'none';
+    } else {
+      avg.style.display = 'none';
+    }
+
+    var box = $('#exList');
+    if (!arr.length) {
+      var any = PROJECTS.some(function(q){ return (d.ex[q.id] || []).length > 0; });
+      box.innerHTML = any ? '<div class="empty">' + p.name + '今天还没有记录</div>' : '';
+      return;
+    }
+    box.innerHTML = arr.map(function(r){
+      var txt, sub = '';
+      if (p.mode === 'dist') {
+        txt = fmtNum(r.km) + ' 公里 · ' + fmtNum(r.min) + ' 分钟';
+        if (p.id === 'run' && r.km > 0) sub = '配速 ' + fmtPace(r.min / r.km) + ' /公里';
+      } else {
+        txt = fmtNum(r.min) + ' 分钟';
+      }
+      return '<div class="row">' +
+        '<span class="dot" style="background:' + state.colors[p.id] + '"></span>' +
+        '<span class="txt">' + txt + (sub ? '<div class="sub2">' + sub + '</div>' : '') + '</span>' +
+        '<span class="t">' + fmtTime(r.t) + '</span>' +
+        '<button class="x" type="button" data-kind="ex" data-pid="' + p.id + '" data-id="' + r.id + '">×</button>' +
+      '</div>';
+    }).join('');
+  }
+
+  /* ================= 交互 ================= */
+  $('#addWater').addEventListener('click', function(){
+    var d = day();
+    d.water.push({id: uid(), t: Date.now()});
+    save(); render();
+    var total = d.water.length * CUP;
+    toast(total >= GOAL && total - CUP < GOAL ? '今日饮水目标已达成 🎉' : '已记录 250 毫升');
+  });
+
+  $('#addEx').addEventListener('click', function(){
+    var p = PMAP[current];
+    var min = parseFloat($('#inMin').value);
+    if (!(min > 0)) { toast('请填写运动分钟数'); return; }
+    var km = 0;
+    if (p.mode === 'dist') {
+      km = parseFloat($('#inKm').value);
+      if (!(km > 0)) { toast('请填写公里数'); return; }
+      km = Math.round(km * 100) / 100;
+    }
+    min = Math.round(min * 10) / 10;
+
+    var d = day();
+    d.ex[p.id].push({id: uid(), t: Date.now(), km: km, min: min});
+    save();
+    $('#inKm').value = '';
+    $('#inMin').value = '';
+    render();
+    toast('已记录' + p.name + ' ' + fmtNum(min) + ' 分钟');
+  });
+
+  document.addEventListener('click', function(e){
+    // 撤销
+    var x = e.target.closest ? e.target.closest('.x') : null;
+    if (x) {
+      var d = day();
+      var kind = x.getAttribute('data-kind');
+      var id = x.getAttribute('data-id');
+      if (kind === 'water') {
+        d.water = d.water.filter(function(r){ return r.id !== id; });
+      } else {
+        var pid = x.getAttribute('data-pid');
+        d.ex[pid] = (d.ex[pid] || []).filter(function(r){ return r.id !== id; });
+      }
+      save(); render();
+      toast('已撤销这条记录');
+      return;
+    }
+    // 切换项目
+    var tab = e.target.closest ? e.target.closest('.tab') : null;
+    if (tab) {
+      current = tab.getAttribute('data-tab');
+      render();
+    }
+  });
+
+  // 昵称
+  $('#editNick').addEventListener('click', function(){
+    $('#nickInput').value = state.nickname;
+    $('#nickMask').classList.add('on');
+    setTimeout(function(){ $('#nickInput').focus(); }, 60);
+  });
+  $('#nickCancel').addEventListener('click', function(){
+    $('#nickMask').classList.remove('on');
+  });
+  $('#nickSave').addEventListener('click', function(){
+    var v = $('#nickInput').value.trim().slice(0, 12);
+    if (!v) { toast('昵称不能为空'); return; }
+    state.nickname = v;
+    save(); render();
+    $('#nickMask').classList.remove('on');
+    toast('昵称已更新');
+  });
+  $('#nickInput').addEventListener('keydown', function(e){
+    if (e.key === 'Enter') $('#nickSave').click();
+  });
+
+  /* ================= 今日记录卡 ================= */
+  function rr(ctx, x, y, w, h, r){
+    var tl, tr, br, bl;
+    if (Array.isArray(r)) { tl = r[0]; tr = r[1]; br = r[2]; bl = r[3]; }
+    else { tl = tr = br = bl = r; }
+    ctx.beginPath();
+    ctx.moveTo(x + tl, y);
+    ctx.lineTo(x + w - tr, y);
+    ctx.quadraticCurveTo(x + w, y, x + w, y + tr);
+    ctx.lineTo(x + w, y + h - br);
+    ctx.quadraticCurveTo(x + w, y + h, x + w - br, y + h);
+    ctx.lineTo(x + bl, y + h);
+    ctx.quadraticCurveTo(x, y + h, x, y + h - bl);
+    ctx.lineTo(x, y + tl);
+    ctx.quadraticCurveTo(x, y, x + tl, y);
+    ctx.closePath();
+  }
+
+  function clip(ctx, text, maxW){
+    if (ctx.measureText(text).width <= maxW) return text;
+    var t = text;
+    while (t.length > 1 && ctx.measureText(t + '…').width > maxW) t = t.slice(0, -1);
+    return t + '…';
+  }
+
+  function buildCard(){
+    var d = day();
+    var rows = [];
+    var totalMin = 0, totalKm = 0;
+    PROJECTS.forEach(function(p){
+      var arr = d.ex[p.id] || [];
+      if (!arr.length) return;
+      var km = 0, min = 0;
+      arr.forEach(function(r){ km += (r.km || 0); min += (r.min || 0); });
+      totalMin += min;
+      if (p.mode === 'dist') totalKm += km;
+      rows.push({p: p, km: km, min: min, count: arr.length});
+    });
+
+    var S = 3, W = 360, PAD = 24, HEAD = 116;
+    var rowsH = (rows.length || 1) * 46;
+    var H = 324 + rowsH;
+
+    var cv = document.createElement('canvas');
+    cv.width = W * S; cv.height = H * S;
+    var ctx = cv.getContext('2d');
+    ctx.scale(S, S);
+
+    // 页面底色 + 白色卡片
+    ctx.fillStyle = '#eef3fb';
+    ctx.fillRect(0, 0, W, H);
+    rr(ctx, 0, 0, W, H, 20);
+    ctx.fillStyle = '#ffffff';
+    ctx.fill();
+
+    // 顶部渐变
+    ctx.save();
+    rr(ctx, 0, 0, W, HEAD, [20, 20, 0, 0]);
+    ctx.clip();
+    var g = ctx.createLinearGradient(0, 0, W, HEAD);
+    g.addColorStop(0, '#3d8bff');
+    g.addColorStop(1, '#6db4ff');
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, W, HEAD);
+    ctx.globalAlpha = .13;
+    ctx.fillStyle = '#ffffff';
+    ctx.beginPath(); ctx.arc(W - 14, -4, 66, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(W - 92, HEAD + 10, 38, 0, Math.PI * 2); ctx.fill();
+    ctx.globalAlpha = 1;
+    ctx.restore();
+
+    // 头像
+    ctx.beginPath();
+    ctx.arc(52, 58, 28, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(255,255,255,.94)';
+    ctx.fill();
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.font = '30px "Segoe UI Emoji","Apple Color Emoji","Noto Color Emoji",sans-serif';
+    ctx.fillText('🌱', 52, 60);
+
+    // 昵称 / 日期
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'alphabetic';
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 17px ' + FONT;
+    ctx.fillText(clip(ctx, state.nickname, W - PAD - 92), 92, 52);
+    ctx.fillStyle = 'rgba(255,255,255,.86)';
+    ctx.font = '11.5px ' + FONT;
+    ctx.fillText(fmtDateShort(), 92, 75);
+    ctx.textAlign = 'right';
+    ctx.fillStyle = 'rgba(255,255,255,.78)';
+    ctx.font = '10px ' + FONT;
+    ctx.fillText('今日健康记录', W - PAD, 75);
+
+    // 饮水
+    var total = d.water.length * CUP;
+    var pct = Math.min(1, total / GOAL);
+    var cx = PAD + 40, cy = 180, r = 34;
+
+    ctx.lineWidth = 9;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.arc(cx, cy, r, 0, Math.PI * 2);
+    ctx.strokeStyle = '#eaf1fc';
+    ctx.stroke();
+    if (pct > 0) {
+      ctx.beginPath();
+      ctx.arc(cx, cy, r, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * pct);
+      ctx.strokeStyle = '#2f88ff';
+      ctx.stroke();
+    }
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillStyle = '#2f88ff';
+    ctx.font = 'bold 15px ' + FONT;
+    ctx.fillText(Math.round(total / GOAL * 100) + '%', cx, cy + 1);
+
+    var bx = 118;
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'alphabetic';
+    ctx.fillStyle = '#9aa6b8';
+    ctx.font = '10.5px ' + FONT;
+    ctx.fillText('今日饮水', bx, 156);
+
+    ctx.fillStyle = '#16202c';
+    ctx.font = 'bold 25px ' + FONT;
+    var numStr = String(total);
+    ctx.fillText(numStr, bx, 187);
+    var numW = ctx.measureText(numStr).width;
+    ctx.fillStyle = '#9aa6b8';
+    ctx.font = '11px ' + FONT;
+    ctx.fillText('/ ' + GOAL + ' 毫升', bx + numW + 6, 187);
+
+    var barY = 197, barW = W - PAD - bx, barH = 6;
+    rr(ctx, bx, barY, barW, barH, 3);
+    ctx.fillStyle = '#eaf1fc';
+    ctx.fill();
+    if (pct > 0) {
+      rr(ctx, bx, barY, Math.max(4, barW * pct), barH, 3);
+      ctx.fillStyle = '#2f88ff';
+      ctx.fill();
+    }
+    var left = Math.max(0, GOAL - total);
+    ctx.fillStyle = '#9aa6b8';
+    ctx.font = '10.5px ' + FONT;
+    ctx.fillText(left === 0 ? '今日目标已达成 🎉' : '还差 ' + left + ' 毫升', bx, 220);
+
+    // 分割线
+    ctx.strokeStyle = '#eef1f6';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(PAD, 242.5);
+    ctx.lineTo(W - PAD, 242.5);
+    ctx.stroke();
+
+    // 运动标题
+    ctx.textAlign = 'left';
+    ctx.fillStyle = '#16202c';
+    ctx.font = 'bold 12px ' + FONT;
+    ctx.fillText('今日运动', PAD, 264);
+    ctx.textAlign = 'right';
+    ctx.fillStyle = '#8b95a7';
+    ctx.font = '10.5px ' + FONT;
+    ctx.fillText(rows.length
+      ? ('共 ' + Math.round(totalMin) + ' 分钟' + (totalKm > 0 ? ' · ' + fmtNum(totalKm) + ' 公里' : ''))
+      : '暂无记录', W - PAD, 264);
+
+    // 运动明细
+    var rowsTop = 272;
+    if (!rows.length) {
+      ctx.textAlign = 'center';
+      ctx.fillStyle = '#b2bccb';
+      ctx.font = '11.5px ' + FONT;
+      ctx.fillText('今日暂无运动记录', W / 2, rowsTop + 28);
+    } else {
+      rows.forEach(function(r, i){
+        var y = rowsTop + i * 46;
+        ctx.beginPath();
+        ctx.arc(PAD + 4, y + 11, 4, 0, Math.PI * 2);
+        ctx.fillStyle = state.colors[r.p.id];
+        ctx.fill();
+
+        ctx.textAlign = 'left';
+        ctx.fillStyle = '#16202c';
+        ctx.font = 'bold 12px ' + FONT;
+        ctx.fillText(r.p.name, PAD + 16, y + 16);
+
+        var detail = r.count + ' 次';
+        if (r.p.mode === 'dist') {
+          detail += ' · ' + Math.round(r.min) + ' 分钟';
+          if (r.p.id === 'run' && r.km > 0) detail += ' · 平均配速 ' + fmtPace(r.min / r.km);
+        }
+        ctx.fillStyle = '#8b95a7';
+        ctx.font = '10.5px ' + FONT;
+        ctx.fillText(detail, PAD + 16, y + 33);
+
+        ctx.textAlign = 'right';
+        ctx.fillStyle = state.colors[r.p.id];
+        ctx.font = 'bold 12.5px ' + FONT;
+        ctx.fillText(r.p.mode === 'dist' ? fmtNum(r.km) + ' 公里' : Math.round(r.min) + ' 分钟', W - PAD, y + 16);
+      });
+    }
+
+    // 页脚
+    var yF = rowsTop + rowsH + 6;
+    ctx.strokeStyle = '#eef1f6';
+    ctx.beginPath();
+    ctx.moveTo(PAD, yF + .5);
+    ctx.lineTo(W - PAD, yF + .5);
+    ctx.stroke();
+
+    ctx.textAlign = 'left';
+    ctx.fillStyle = '#b2bccb';
+    ctx.font = '9.5px ' + FONT;
+    ctx.fillText('🌱 昊哥的健康记录', PAD, yF + 20);
+    ctx.textAlign = 'right';
+    ctx.fillText('生成于 ' + fmtDateShort() + ' ' + fmtTime(Date.now()), W - PAD, yF + 20);
+
+    return cv;
+  }
+
+  $('#openCard').addEventListener('click', function(){
+    cardCanvas = buildCard();
+    $('#cardImg').src = cardCanvas.toDataURL('image/png');
+    $('#cardMask').classList.add('on');
+  });
+
+  $('#btnClose').addEventListener('click', function(){
+    $('#cardMask').classList.remove('on');
+  });
+
+  $('#btnSave').addEventListener('click', function(){
+    if (!cardCanvas) cardCanvas = buildCard();
+    var url = cardCanvas.toDataURL('image/png');
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = '健康记录卡_' + todayKey() + '.png';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    toast('已保存图片，也可长按图片保存');
+  });
+
+  // 点遮罩关闭
+  ['nickMask', 'cardMask'].forEach(function(id){
+    var m = document.getElementById(id);
+    m.addEventListener('click', function(e){
+      if (e.target === m) m.classList.remove('on');
+    });
+  });
+
+  // 存储不可用时：给一条"在独立标签页打开"的出路
+  document.getElementById('noticeBtn').addEventListener('click', function(){
+    var w = null;
+    try { w = window.open(window.location.href, '_blank'); } catch(e){ w = null; }
+    if (!w) toast('请用浏览器右上角菜单「在浏览器打开」');
+  });
+
+  if (!STORAGE_OK) showNotice();
+  render();
+})();
+</script>
+</body>
+</html>
